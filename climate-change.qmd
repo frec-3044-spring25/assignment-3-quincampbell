@@ -170,7 +170,7 @@ fill = NA in rollmean() or sides = 2 in filter() handles the edges where the win
 
 This code worked for me (the zoo package), and the only thing I had to modify was the data name.
 ```{r}
-install.packages("zoo")
+install.packages("zoo", repos = "https://cloud.r-project.org/")
 library(zoo)
 ```
 
