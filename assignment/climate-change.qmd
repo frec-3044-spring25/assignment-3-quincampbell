@@ -44,13 +44,26 @@ ggplot(co2, aes(x = decimal_date, y = monthly_average)) +
 Describe the overall trend in the CO2 data.
 
 **Answer 1:**
+The overall trend in the CO2 data is positive and upward; the CO2 concentration is rising fairly steadily over time.
+
+```{r}
+monthly_co2 <- co2 |>
+  group_by(month) |>
+  summarize(mean_co2 = mean(monthly_average, na.rm = TRUE))
+
+ggplot(monthly_co2, aes(x = month, y = mean_co2)) +
+  geom_line() +
+  geom_point() +
+  labs(x = "Month", y = "Mean CO2 concentration (ppm)", title = "Average Monthly CO2") 
+
+```
 
 **Question 2:**
 
 How does CO2 vary within a year?  What month is it at max?  Min?  What might explain this sub-annual pattern? (you will need to write code and make a plot to answer this question)
 
 **Answer 2:**
-
+The average CO2 levels for a year are fairly steady for the first couple months, then increase aorund March, reach their peak around May, and then steadily drop until around late August/ early September, where they reach their lowest level. From there they slowly rise again in December, reaching levels a only little lower than January's average. My guess as to what would explain this pattern is plants are absorbing more CO2 in the warmer months, and then are absorbing far less CO2 when they're dormant for the winter.
 
 
 ## Global Temperature Data
@@ -70,7 +83,13 @@ Describe the data set to the best of your ability, given the documentation provi
 - What is the difference between "global temperature" and "global temperature anomaly"? 
 
 **Answer 3:**
+This data is from NASA's Goddard Institute for Space Studies (GISS). 
+The columns are:
+Year: class= integer, units= years
+No_Smoothing: class= numeric, units= degrees 
+Lowess(5) = class= numeric, units= degrees Celcius
 
+Global temperature is the average temperature of Earth's surface. A global temperature anomaly is the difference between an average or baseline temperature, and the one recorded.
 
 **Question 4:**
 
@@ -80,6 +99,14 @@ You'll need to determine the file's delimiter and any comments or skips. You wil
 
 **Answer 4:**
 
+```{r}
+
+temp <-  read_table("https://data.giss.nasa.gov/gistemp/graphs/graph_data/Global_Mean_Estimates_based_on_Land_and_Ocean_Data/graph.txt", 
+                  comment="#",
+                  col_names = c("year", "no_smoothing", "lowess_5"), 
+                  skip = 5,
+                  na = c("-1", "-99.99"))
+```
 **Question 5:**
 
 Plot the trend in global mean temperatures over time.  Describe what you see in the plot and how you interpret the patterns you observe.
@@ -97,6 +124,42 @@ You will use rolling averages to help you explore the evidence for a pause. Sinc
 Use a search engine (e.g., Google) or a chat LLM to find out how to calculate a rolling average in R. What search term or chat LLM prompt did you use?  What website or answer from the chat LLM did you end up using?  How much did you need to modify the code from the website or chat LLM to answer the question successfully?
 
 **Answer 6:**
+
+Chat LLM prompt used: "how to calculate a rolling average in R"
+
+Answer given: "To calculate a rolling (or moving) average in R, you can use the zoo package, which provides the rollmean() function, or use filter() from the dplyr package for simpler operations. Here's how to do it using both methods:
+1. Using zoo::rollmean()
+First, you'll need to install and load the zoo package if you don't have it already:
+r
+Copy
+Edit
+install.packages("zoo")
+library(zoo)
+Then, you can use the rollmean() function to calculate a rolling average. For example, a rolling average with a window size of 5:
+r
+Copy
+Edit
+# Example data
+data <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+# Calculate a rolling average with a window size of 5
+rolling_avg <- rollmean(data, 5, fill = NA)  # fill = NA fills the beginning with NA because of missing values
+# Print the result
+print(rolling_avg)
+2. Using dplyr::filter() (Convolution Method)
+Alternatively, you can use filter() from dplyr to calculate a rolling average manually by applying a simple moving average filter:
+r
+Copy
+Edit
+library(dplyr)
+# Example data
+data <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+# Calculate a rolling average with a window size of 5
+rolling_avg <- filter(data, rep(1/5, 5), sides = 2)
+# Print the result
+print(rolling_avg)
+Key Points:
+Window Size: The window size (5 in these examples) determines how many values are averaged in each calculation.
+fill = NA in rollmean() or sides = 2 in filter() handles the edges where the window cannot be applied (such as at the beginning or end of the series)."
 
 **Question 7:**
 
