@@ -112,7 +112,14 @@ temp <-  read_table("https://data.giss.nasa.gov/gistemp/graphs/graph_data/Global
 Plot the trend in global mean temperatures over time.  Describe what you see in the plot and how you interpret the patterns you observe.
 
 **Answer 5:**
+This graph shows a mostly steady increase over time. The graph shows that from 1880 up to about 1940, the global mean temperature anomalies were negative,   meaning the temp for that year was below the baseline. From 1940 to present day, temperature anomalies have been increasingly positive, demonstarting a higher than baseline mean global temperature. 
 
+```{r}
+ggplot(temp, aes(x = year, y = no_smoothing))+
+  geom_line() +
+  geom_line(aes(y = lowess_5), color = "blue") +
+  labs(title = "Global Mean Temperature Anomalies over Time", x ="Year", y = "Global Mean Temperature Anomalies")
+```
 ## Evaluating the evidence for a "Pause" in warming?
 
 The [2013 IPCC Report](https://www.ipcc.ch/pdf/assessment-report/ar5/wg1/WG1AR5_SummaryVolume_FINAL.pdf) included a tentative observation of a "much smaller increasing trend" in global mean temperatures since 1998 than was observed previously.  This led to much discussion in the media about the existence of a "Pause" or "Hiatus" in global warming rates, as well as much research looking into where the extra heat could have gone.  (Examples discussing this question include articles in [The Guardian](http://www.theguardian.com/environment/2015/jun/04/global-warming-hasnt-paused-study-finds), [BBC News](http://www.bbc.com/news/science-environment-28870988), and [Wikipedia](https://en.wikipedia.org/wiki/Global_warming_hiatus)). 
@@ -161,24 +168,55 @@ Key Points:
 Window Size: The window size (5 in these examples) determines how many values are averaged in each calculation.
 fill = NA in rollmean() or sides = 2 in filter() handles the edges where the window cannot be applied (such as at the beginning or end of the series)."
 
+This code worked for me (the zoo package), and the only thing I had to modify was the data name.
+```{r}
+install.packages("zoo")
+library(zoo)
+```
+
+```{r}
+rolling_avg <- rollmean(temp, k = 5, fill = NA)
+```
+
 **Question 7:**
 
 - What is the meaning of "5-year average" vs. "annual average"?
 - Create a data frame from the annual temperature anomaly data (from Question 4) with three new columns: 5-year running averages, 10-year running averages, and 20-year running averages.
 
 **Answer 7:**
+Five-year average refers to the average over a five-year period, where annual average is just for one year.
 
+```{r}
+new_df <- data.frame( 
+  year = temp$year,
+  rolling_5year = rollmean(temp$lowess_5, k = 5, fill = NA, align = "center"),
+  rolling_10year = rollmean(temp$lowess_5, k = 10, fill = NA, align = "center"),
+  rolling_20year = rollmean(temp$lowess_5, k = 20, fill = NA, align = "center")
+)
+```
 **Question 8:**
 
 Plot the different averages on the *same plot* and describe what differences you see and why.  
 
 **Answer 8:**
+While the general trend for each line is very similar, the main differences between the lines is the amount of fluctuation. The red, or 5-year line, fluctuates the most because it takes averages over a shorter period of time, while the blue, or 20-year line, fluctuates the least (is the smoothest), because it takes averages over the largest period of time.
+
+```{r}
+ggplot(new_df, aes(x = year)) +
+  geom_line(aes(y = rolling_5year), color = "red") +
+  geom_line(aes(y = rolling_10year), color = "yellow") +  
+  geom_line(aes(y = rolling_20year), color = "blue") +
+  labs(title = "5, 10, and 20 Year Average of Global Mean Temperature Anomalies", 
+       x = "Year",
+       y = "Global Mean Temperature Anomalies")
+```
 
 **Question 9:**
 
 By examining the data here, what evidence do you find or not find for such a pause? 
 
 **Answer 9:**
+This graph does not support the theory of a "pause" in global warming since 1998, as previously theorized. According to this graph, global mean temperature anomalies have actually been increasing in size since 1998, not decreasing.
 
 ## Longer term trends in CO2 Records
 
@@ -202,7 +240,6 @@ download.file("https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-45
 
 You can click on the file in your Files pane to view it before reading into R.
 
-
 **Question 10:**
 
 The broad question is: how do recent atmospheric CO2 levels compare to historical levels?
@@ -219,11 +256,67 @@ Your answer to Question 10 is going to be a mix of code chunks and text that you
 - Describe your conclusions to the question "How do recent atmospheric CO2 levels compare to historical levels?" using your plot as supporting evidence.   
 
 **Answer 10:**
+The columns are Depth (meters), Age of the ice (year BP), Mean age of the air (year BP), and CO2 Concentration (parts per million by volume). This data comes from thr Vostok Ice Core, and the labs Laboratoire de Glaciologie et de Geophysique de l'Environnement, 38402 Saint Martin d'Heres Cedex, France and
+Arctic and Antarctic Research Institute Beringa Street 38 St. Petersburg 199226, Russia.             
+
+For temporal resolution, this data set was from 2003, but the data is from 419328 to 5679 years before present.
 
 ```{r}
+#read in and prepare the data for analysis
+ice_core <- read_table("https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-457358fdc81d3a5-20180726T203952542", 
+                       comment = "#",
+                       col_names = c("Depth(m)", "Age_of_the_ice", "Mean_age_of_air", "CO2_conc"), 
+                       skip = 21,
+                       na = c("-1", "-99.99"))
+ice_core
+
+```
+
+
+```{r}
+#reverse the ordering to create a chronological record so that each measurement is associated with calender year.
+
+ice_core_sorted <- ice_core |>
+  mutate(calendar_year = 2003 - Age_of_the_ice)
 
 
 ```
+
+```{r}
+#plot the data
+
+ggplot(ice_core_sorted, aes(x = calendar_year, y = CO2_conc)) +
+ geom_line()+
+  labs(title = "CO2 Concentration from Ice Core",
+       x = "Calendar Year", 
+       y = "CO2 Concentration (ppmv)")
+```
+
+```{r}
+#Combine this time series with the Mauna Loa data (the Warm-up exercise in this assignment).  You will use "bind_rows()".
+co2 <- co2 |>
+  rename(CO2_conc = monthly_average)
+
+co2 <- co2 |>
+  rename(calendar_year = year)
+
+combined_series <- bind_rows(
+  ice_core_sorted |>
+    select(calendar_year, CO2_conc),
+  co2 |>
+    select(calendar_year, CO2_conc))
+```
+
+```{r}
+#Plot the combined data. (the most recent time period must be on the right side of the plot).   
+ggplot(combined_series, aes(x = calendar_year, y = CO2_conc)) +
+ geom_line()+
+  labs(title = "CO2 Concentration over Time",
+       x = "Calendar Year", 
+       y = "CO2 Concentration (ppmv)")
+
+```
+This graph demonstrates that current atmospheric CO2 levels are signifigantly higher than historical levels. The ice core data shows that CO2 levels have always fluctuated, but when combined with the Mauna Loa data we see that recent fluctuations have far bypassed historical ones. The highest peak CO2 concentration for the ice core data is 300 ppmv, but for the present data it is over 435 ppmv.
 
 # Render and committing
 
@@ -233,5 +326,20 @@ Remember to Render your document as HTML and comment+push to GitHub your code an
 
 Include citation of any AI-generated assistance or discussion with classmates (per policy in syllabus). Proper documentation of AI-generated assistance includes the prompt, the source (e.g., ChatGPT), and the significant parts of the response.  Proper documentation of discussion with classmates include listing their names and the components discussed.  
 
+For question 7 I asked ChatGPT "how to create a new data frame in r". The response I got was this:
+"To create a new data frame in R, you can use the data.frame() function. Here's the basic syntax for creating a new data frame:
 
+Example:
+r
+Copy
+Edit
+# Create a new data frame with sample data
+new_df <- data.frame(
+  year = c(2000, 2001, 2002, 2003, 2004),
+  temperature_anomaly = c(0.4, 0.5, 0.6, 0.7, 0.8),
+  region = c("Global", "Global", "Global", "Global", "Global")
+)
+
+# Print the data frame
+print(new_df)"
 
